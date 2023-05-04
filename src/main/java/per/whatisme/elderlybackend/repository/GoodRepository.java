@@ -11,5 +11,4 @@ public interface GoodRepository extends ReactiveMongoRepository<Good, Long> {
     Flux<Good> findGoodsByMerchantId(Long merchantId);
 
     Flux<Good> findGoodsByMerchantNameContainsOrNameContainsOrDescriptionContains(String merchantName, String name, String description);
-
 }
