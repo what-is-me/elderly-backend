@@ -28,6 +28,7 @@ public class GoodController {
     @Operation(summary = "修改或新增商品，没有id表示新增，merchant_name不用放，会自动生成")
     Mono<ResponseEntity<Good>> saveGood(@RequestBody Good good) {
         if (good.getId() == null || good.getId() == 0) good.setId(UidGenerator.generate());
+        if (good.getDiscount() == null || good.getDiscount() > 1 || good.getDiscount() <= 0) good.setDiscount(1F);
         return merchantRepository.findById(good.getMerchantId()).flatMap(merchant -> {
                     good.setMerchantName(merchant.getUsername());
                     log.info(good.toString());
