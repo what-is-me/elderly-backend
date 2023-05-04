@@ -1,0 +1,11 @@
+POST http://localhost:8080/api/admin/elderly/
+Content-Type: application/json
+
+{
+  "user_id": 2,
+  "password": "password",
+  "username": "Tester2",
+  "address": "Shanghai"
+}
+
+###

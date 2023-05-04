@@ -1,0 +1,36 @@
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allow-credentials: true
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+  data:
+    mongodb:
+      #uri:  mongodb://localhost:27017/elderly
+      host: localhost
+      database: elderly
+      port: 27017
+      username: admin
+      password: "password"
+      authentication-database: admin
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    date-format: yyyy-MM-dd HH:mm:ss
+    locale: zh
+    time-zone: GMT+8
+    default-property-inclusion: NON_NULL
+    serialization:
+      WRITE_DATES_AS_TIMESTAMPS: true
+      FAIL_ON_EMPTY_BEANS: true
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+    mapper:
+      USE_GETTERS_AS_SETTERS: true
+    parser:
+      ALLOW_SINGLE_QUOTES: true
+server:
+  port: 8080
