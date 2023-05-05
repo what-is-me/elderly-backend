@@ -3,7 +3,6 @@ package per.whatisme.elderlybackend.controller;
 import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Example;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +32,10 @@ public class UserController {
     @PostMapping("/common/login")
     public Mono<User> login(@RequestBody User user) {
         user.setPassword(new PasswordEncoder().encode(user.getPassword()));
-        return userRepository.findOne(Example.of(user));
+        return userRepository.findUserByUsername(user.getUsername()).flatMap(u -> {
+            if (u.getPassword().equals(user.getPassword())) return Mono.just(u);
+            return Mono.empty();
+        });
     }
 
     @Operation(summary = "注册：只对商家开放")
