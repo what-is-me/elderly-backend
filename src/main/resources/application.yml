@@ -2,12 +2,13 @@ spring:
   cloud:
     gateway:
       globalcors:
-        corsConfigurations:
+        cors-configurations:
           '[/**]':
-            allow-credentials: true
+            allowCredentials: true
             allowedOrigins: "*"
             allowedMethods: "*"
             allowedHeaders: "*"
+        add-to-simple-url-handler-mapping: true
   data:
     mongodb:
       #uri:  mongodb://localhost:27017/elderly
@@ -33,4 +34,4 @@ spring:
     parser:
       ALLOW_SINGLE_QUOTES: true
 server:
-  port: 8080
+  port: 9999

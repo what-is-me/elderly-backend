@@ -11,10 +11,12 @@ import org.springframework.web.bind.annotation.*;
 import per.whatisme.elderlybackend.bean.Purchase;
 import per.whatisme.elderlybackend.bean.Star;
 import per.whatisme.elderlybackend.bean.StarBody;
+import per.whatisme.elderlybackend.bean.User;
 import per.whatisme.elderlybackend.repository.ElderlyRepository;
 import per.whatisme.elderlybackend.repository.GoodRepository;
 import per.whatisme.elderlybackend.repository.PurchaseRepository;
 import per.whatisme.elderlybackend.repository.StarRepository;
+import per.whatisme.elderlybackend.utils.TokenHandler;
 import per.whatisme.elderlybackend.utils.UUIDGenerator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -33,41 +35,66 @@ public class PurchaseController {
     @Autowired
     GoodRepository goodRepository;
 
-    @GetMapping("/elderly/stared/{id}")
+    @GetMapping("/elderly/stared")
     @Operation(summary = "老人所收藏的商品")
-    public Mono<Star> findStars(@PathVariable Long id) {
-        return starRepository.findById(id);
+    public Mono<ResponseEntity<Star>> findStars(
+            @RequestParam String token) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        return starRepository
+                .findById(user.getUserId())
+                .map(ResponseEntity::ok);
     }
 
-    @PostMapping("/elderly/star/{id}")
+    @PostMapping("/elderly/star")
     @Operation(summary = "老人收藏商品")
-    public Mono<Star> addStar(@PathVariable Long id, @RequestBody StarBody s) {
-        return starRepository.findById(id)
-                .defaultIfEmpty(new Star(id))
+    public Mono<ResponseEntity<Star>> addStar(
+            @RequestParam String token,
+            @RequestBody StarBody s) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        return starRepository.findById(user.getUserId())
+                .defaultIfEmpty(new Star(user.getUserId()))
                 .map(star -> {
                     star.getStared().put(s.getGoodId(), s);
                     return star;
                 }).flatMap(star -> starRepository.save(star))
-                .doOnError(throwable -> log.error(throwable.getMessage()));
+                .map(ResponseEntity::ok)
+                .doOnError(throwable -> log.error(throwable.getMessage()))
+                .onErrorReturn(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
     }
 
-    @DeleteMapping("/elderly/unstar/{id}")
+    @DeleteMapping("/elderly/unstar")
     @Operation(summary = "老人取消收藏")
-    public Mono<Star> deleteStar(@PathVariable Long id, @RequestParam Long goodId) {
-        return starRepository.findById(id)
+    public Mono<ResponseEntity<Star>> deleteStar(
+            @RequestParam String token,
+            @RequestParam Long goodId) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        return starRepository.findById(user.getUserId())
                 .map(star -> {
                     star.getStared().remove(goodId);
                     return star;
-                }).flatMap(star -> starRepository.save(star));
+                }).flatMap(star -> starRepository.save(star))
+                .map(ResponseEntity::ok);
     }
 
     @PostMapping("/elderly/buy")
     @Operation(summary = "老人购买")
-    public Mono<ResponseEntity<Purchase>> buy(@RequestBody Purchase purchase) {
-        return elderlyRepository.findById(purchase.getElderlyId()).flatMap(
+    public Mono<ResponseEntity<Purchase>> buy(
+            @RequestParam String token,
+            @RequestBody Purchase purchase) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        return elderlyRepository.findById(user.getUserId()).flatMap(
                         e -> {
                             if (purchase.getAddress() == null || purchase.getAddress().equals(""))
                                 purchase.setAddress(e.getAddress());
+                            purchase.setElderlyId(user.getUserId());
                             return goodRepository.findById(purchase.getGoodId());
                         }
                 )
@@ -88,52 +115,98 @@ public class PurchaseController {
     }
 
     @PostMapping("/elderly/comment")
-    @ApiOperation(value = "老人评论", notes = "只要传id和comment")
-    public Mono<ResponseEntity<Purchase>> comment(@RequestBody Purchase purchase) {
-        return purchaseRepository.findById(purchase.getId()).map(p -> {
-                    p.setComment(purchase.getComment());
-                    return p;
+    @ApiOperation(value = "老人评论", notes = "只要comment和订单id")
+    public Mono<ResponseEntity<Purchase>> comment(
+            @RequestParam String token,
+            @RequestBody Purchase purchase) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        return purchaseRepository.findById(purchase.getId())
+                .<Purchase>handle((p, sink) -> {
+                    if (p.getElderlyId().equals(user.getUserId())) {
+                        p.setComment(purchase.getComment());
+                        sink.next(p);
+                        return;
+                    }
+                    sink.error(new RuntimeException("UNAUTHORIZED"));
                 }).flatMap(p -> purchaseRepository.save(p))
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND))
                 .doOnError(e -> log.error(e.getMessage()))
-                .onErrorReturn(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+                .onErrorResume(e -> {
+                    if (e.getMessage().equals("UNAUTHORIZED"))
+                        return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+                    return Mono.just(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+                });
     }
 
-    @GetMapping("/elderly/get-buy/{id}")
+    @GetMapping("/elderly/get-buy")
     @Operation(summary = "老人查看自己的订单")
-    public Flux<Purchase> findElderlyPurchase(@PathVariable Long id) {
-        return purchaseRepository.findAllByElderlyId(id);
+    public Flux<Purchase> findElderlyPurchase(
+            @RequestParam String token) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"elderly".equals(user.getUserType()))
+            return Flux.empty();
+        return purchaseRepository
+                .findPurchasesByElderlyId(user.getUserId());
     }
 
-    @GetMapping("/merchant/get-buy/{id}")
+    @GetMapping("/merchant/get-buy")
     @Operation(summary = "商家查看自己收到的订单")
-    public Flux<Purchase> findMerchantPurchase(@PathVariable Long id) {
-        return purchaseRepository.findAllByMerchantId(id);
+    public Flux<Purchase> findMerchantPurchase(
+            @RequestParam String token) {
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"merchant".equals(user.getUserType()))
+            return Flux.empty();
+        return purchaseRepository
+                .findAllByMerchantId(user.getUserId());
     }
 
-    @GetMapping("/common/good-comment/{goodId}")
+    @GetMapping("/common/good-comment")
     @Operation(summary = "某件商品的所有评论")
-    public Flux<String> comments(@PathVariable Long goodId) {
-        return purchaseRepository.findAllByGoodId(goodId)
+    public Flux<String> comments(
+            @RequestParam Long goodId) {
+        return purchaseRepository
+                .findAllByGoodId(goodId)
                 .map(p -> p.getComment() == null || p.getComment().equals("") ? "未评论" : p.getComment());
     }
 
-    @GetMapping("/common/purchase/{purchaseId}")
-    public Mono<Purchase> findById(@PathVariable String purchaseId) {
-        return purchaseRepository.findById(purchaseId);
+    @GetMapping("/common/purchase")
+    public Mono<Purchase> findById(
+            @RequestParam String purchaseId) {
+        return purchaseRepository
+                .findById(purchaseId);
     }
 
-    @PostMapping("/merchant/alter-purchase-statue/{purchaseId}")
+    @PostMapping("/merchant/alter-purchase-statue")
     @Operation(summary = "改变某订单交付状态，1交付，0未交付，-1未正常交付(退货),statue直接放路径上")
-    public Mono<ResponseEntity<Purchase>> alterPurchaseStatue(@PathVariable String purchaseId, @RequestParam Integer statue) {
-        return purchaseRepository.findById(purchaseId).map(p -> {
-                    p.setStatue(statue);
-                    return p;
+    public Mono<ResponseEntity<Purchase>> alterPurchaseStatue(
+            @RequestParam String token,
+            @RequestParam String purchaseId,
+            @RequestParam Integer statue) {
+        statue = statue == null ? 0 : (statue > 0 ? 1 : (statue < 0 ? -1 : 0));
+        User user = TokenHandler.getUser(token);
+        if (user == null || !"merchant".equals(user.getUserType()))
+            return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+        Integer finalStatue = statue;
+        return purchaseRepository
+                .findById(purchaseId)
+                .<Purchase>handle((p, sink) -> {
+                    if (!p.getMerchantId().equals(user.getUserId())) {
+                        sink.error(new RuntimeException("UNAUTHORIZED"));
+                        return;
+                    }
+                    p.setStatue(finalStatue);
+                    sink.next(p);
                 }).flatMap(p -> purchaseRepository.save(p))
                 .map(ResponseEntity::ok)
                 .defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND))
                 .doOnError(e -> log.error(e.getMessage()))
-                .onErrorReturn(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+                .onErrorResume(e -> {
+                    if (e.getMessage().equals("UNAUTHORIZED"))
+                        return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
+                    return Mono.just(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
+                });
     }
 }
