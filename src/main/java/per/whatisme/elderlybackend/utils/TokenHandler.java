@@ -20,13 +20,17 @@ public class TokenHandler {
         }
         Token token = new Token(UUIDGenerator.generate(), new Date(new Date().getTime() + 1000L * 60 * 60 + 24));
         tokenUser.put(token.getToken(), Pair.of(user, token.getExpire()));
+        userToken.put(user.getUserId(), token.getToken());
         return token;
     }
 
     public static User getUser(String token) {
         Pair<User, Date> pUser = tokenUser.get(token);
         if (pUser == null) return null;
-        if (pUser.getSecond().compareTo(new Date()) < 0) return null;
+        if (pUser.getSecond().compareTo(new Date()) < 0) {
+            tokenUser.remove(token);
+            return null;
+        }
         return pUser.getFirst();
     }
 
