@@ -47,6 +47,11 @@
             <artifactId>springfox-boot-starter</artifactId>
             <version>3.0.0</version>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.uuid</groupId>
+            <artifactId>java-uuid-generator</artifactId>
+            <version>4.1.1</version>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
