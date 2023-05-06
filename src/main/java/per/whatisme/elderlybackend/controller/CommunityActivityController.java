@@ -23,7 +23,7 @@ public class CommunityActivityController {
     @Autowired
     CommunityActivityRepository communityActivityRepository;
 
-    @GetMapping({"/elderly/activities", "/admin/activities/"})
+    @GetMapping({"/elderly/activities", "/admin/activities"})
     Flux<CommunityActivity> findAll() {
         return communityActivityRepository.findAll();
     }

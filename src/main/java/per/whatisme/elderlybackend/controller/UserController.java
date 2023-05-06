@@ -2,6 +2,7 @@ package per.whatisme.elderlybackend.controller;
 
 import io.swagger.annotations.Api;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Map;
 
+@Slf4j
 @RestController
 @Api(tags = "登录、注册、修改个人信息等")
 @RequestMapping("/api")
@@ -49,6 +51,7 @@ public class UserController {
         merchant.setVerified(false);
         merchant.setUserId(UidGenerator.generate());
         merchant.setPassword(new PasswordEncoder().encode(merchant.getPassword()));
+        merchant.setUserType("merchant");
         return merchantRepository
                 .insert(merchant);
     }

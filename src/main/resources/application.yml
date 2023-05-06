@@ -15,9 +15,10 @@ spring:
       host: localhost
       database: elderly
       port: 27017
-      username: admin
-      password: "password"
+      username: root
+      password: "root"
       authentication-database: admin
+      auto-index-creation: true
   jackson:
     property-naming-strategy: SNAKE_CASE
     date-format: yyyy-MM-dd HH:mm:ss
@@ -25,7 +26,7 @@ spring:
     time-zone: GMT+8
     default-property-inclusion: NON_NULL
     serialization:
-      WRITE_DATES_AS_TIMESTAMPS: true
+      WRITE_DATES_AS_TIMESTAMPS: false
       FAIL_ON_EMPTY_BEANS: true
     deserialization:
       FAIL_ON_UNKNOWN_PROPERTIES: false

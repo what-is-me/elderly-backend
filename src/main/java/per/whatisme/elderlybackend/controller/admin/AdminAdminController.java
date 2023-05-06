@@ -55,6 +55,17 @@ public class AdminAdminController {
                 .onErrorReturn(new ResponseEntity<>(HttpStatus.BAD_REQUEST));
     }
 
+    @GetMapping("/init")
+    public Mono<Admin> init() {
+        Admin admin = new Admin();
+        admin.setUsername("admin");
+        admin.setUserId(UidGenerator.generate());
+        admin.setPassword(new PasswordEncoder().encode("password"));
+        admin.setUserType("admin");
+
+        return adminRepository.save(admin);
+    }
+
     @PutMapping("/admin")
     @ApiOperation(value = "更新管理员用户信息", notes = "设置密码长度小于等于20，那么当传回来原始密码时，会对密码加密，否则就什么也不干。<br>user内容必须传全，否则该项内容会被清空。")
     public Mono<ResponseEntity<Admin>> updateAdmin(
