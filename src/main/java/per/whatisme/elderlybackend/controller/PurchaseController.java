@@ -21,6 +21,8 @@ import per.whatisme.elderlybackend.utils.UUIDGenerator;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @Api(tags = "购物相关")
@@ -165,11 +167,12 @@ public class PurchaseController {
 
     @GetMapping("/common/good-comment")
     @Operation(summary = "某件商品的所有评论")
-    public Flux<String> comments(
+    public Mono<List<String>> comments(
             @RequestParam Long goodId) {
         return purchaseRepository
                 .findAllByGoodId(goodId)
-                .map(p -> p.getComment() == null || p.getComment().equals("") ? "未评论" : p.getComment());
+                .map(p -> p.getComment() == null || p.getComment().equals("") ? "未评论" : p.getComment())
+                .collectList();
     }
 
     @GetMapping("/common/purchase")

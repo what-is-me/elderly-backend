@@ -18,7 +18,7 @@ public class TokenHandler {
         if (oldToken != null) {
             tokenUser.remove(oldToken);
         }
-        Token token = new Token(UUIDGenerator.generate(), new Date(new Date().getTime() + 1000L * 60 * 60 + 24));
+        Token token = new Token(UUIDGenerator.generate(), new Date(new Date().getTime() + 1000L * 60 * 60 * 24));
         tokenUser.put(token.getToken(), Pair.of(user, token.getExpire()));
         userToken.put(user.getUserId(), token.getToken());
         return token;

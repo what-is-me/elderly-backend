@@ -59,7 +59,7 @@ public class GoodController {
             @RequestParam String token,
             @PathVariable Long id) {
         User user = TokenHandler.getUser(token);
-        if (user == null || Set.of("merchant", "admin").contains(user.getUserType()))
+        if (user == null || !Set.of("merchant", "admin").contains(user.getUserType()))
             return Mono.just(new ResponseEntity<>(HttpStatus.UNAUTHORIZED));
         if ("admin".equals(user.getUserType()))
             return goodRepository
@@ -86,7 +86,7 @@ public class GoodController {
     }
 
     @GetMapping("/common/good/by_merchant")
-    @Operation(summary = "某家商店的商品，传id或者名字的一部分")
+    @Operation(summary = "某家商店的商品，传id")
     Flux<Good> findAllByMerchant(
             @RequestParam(value = "merchant_id") Long merchantId) {
         return goodRepository
